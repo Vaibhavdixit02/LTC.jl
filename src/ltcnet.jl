@@ -1,5 +1,4 @@
-abstract type Component end
-abstract type CurrentComponent <:Component end
+abstract type CurrentComponent end
 
 struct Mapper{V,F<:Function}
   W::V

@@ -54,7 +54,7 @@ using ForwardDiff
 #@reexport using Statistics
 
 
-rand_uniform(TYPE, lb,ub,dims...) = TYPE.(rand(Uniform(lb,ub),dims...))# |> f64
+rand_uniform(TYPE, lb,ub,dims...) = rand(TYPE, Uniform(lb,ub), dims...)
 
 #Zygote.@nograd rand_uniform, reshape
 

@@ -66,111 +66,46 @@ function cb(x,y,l,m)
   return false
 end
 
-function traintest(n, solver=VCABM(), sensealg=InterpolatingAdjoint(autojacvec=ReverseDiffVJP(true)))
 
-  function lg(p,x,y,model)
-    # reset_state!(model,p)
-    reset!(model)
-    # d = train_data[1]
-    # x,y = d[1], d[2]
-    m = model
-    ŷ = [m(xi,p)[end-m.cell.wiring.n_motor+1:end, :] for xi in x]
-    #ŷ = m.(x,[p])
-    #losses = [Flux.Losses.mse(ŷ[i][end,:], y[i]) for i in 1:length(y)]
-    #sum(losses)/length(losses), ŷ
-    sum(sum([(ŷ[i][end,:] .- y[i]) .^ 2 for i in 1:length(y)]))/length(y), ŷ
-  end
-  cbg = function (p,l,pred;doplot=false) #callback function to observe training
-    display(l)
-    # plot current prediction against data
-    if doplot
-      fig = plot([ŷ[end,1] for ŷ in pred])
-      plot!(fig, [yi[end,1] for yi in y])
-      display(fig)
-    end
-    return false
-  end
-
-  x,y = generate_data()
-  model = LTC.LTCNet(Wiring(2,1), solver, sensealg)
-  #pp, re = Flux.destructure(model)
-  # pp = DiffEqFlux.initial_params(model)
-  # lower,upper = get_bounds(model)
-  lower,upper = [],[]
-  #θ = Flux.params(model)
-  #θ = Flux.params(pp)
-
-  pp = DiffEqFlux.initial_params(model)
-  @show length(pp)
-  @show length(pp)
-
-  #@show sum(length.(θ))
-  @show length(lower)
-
-  train_data = data(n)
-
-  opt = GalacticOptim.Flux.Optimiser(ClipValue(0.5), ADAM(0.05))
-
-
-  # Juno.@profiler gs = Flux.Zygote.gradient(θ) do
-  #   loss(first(train_data)...,model)
-  # end
-  # @time  gs = Flux.Zygote.gradient(θ) do
-  #   loss(first(train_data)...,model)
-  # end
-  # @time  gs = Flux.Zygote.gradient(θ) do
-  #   loss(first(train_data)...,model)
-  # end
-  #
-  #
-  # Juno.@profiler train_loss, back = Flux.Zygote.pullback(() -> loss(x,y,model), θ)
-  # Juno.@profiler gs = back(one(train_loss))
-  # train_loss, back = Flux.Zygote.pullback(() -> loss(x,y,model), θ)
-  # gs = back(one(train_loss))
-  # @time train_loss, back = Flux.Zygote.pullback(() -> loss(x,y,model), θ)
-  # @time gs = back(one(train_loss))
-
-  # use GalacticOptim.jl to solve the problem
-  #adtype = GalacticOptim.AutoZygote()
-  #
-  #optf = GalacticOptim.OptimizationFunction((x, p) -> lg(x,model), adtype)
-  #optfunc = GalacticOptim.instantiate_function(optf, model.cell.p, adtype, nothing)
-  #optprob = GalacticOptim.OptimizationProblem(optfunc, model.cell.p, lb=lower, ub=upper)
-  #
-  #result_neuralode = GalacticOptim.solve(optprob,
-  #                                     ParticleSwarm(;lower,upper,n_particles=6),
-  #                                     cb = cbg,
-  #                                     maxiters = 300)
-
-
-
-  ##
-  #optfun = OptimizationFunction((x,p,dx,dy)->lg(x,dx,dy,model), GalacticOptim.AutoZygote())
-  #optprob = OptimizationProblem(optfun, θ[1], lb=lower, ub=upper)
-  ##using IterTools: ncycle
-  #res1 = GalacticOptim.solve(optprob, opt, train_data, cb = cbg, maxiters = n)
-  #return res1
-
-  #Flux.train!((x,y) -> loss(x,y,model), θ, train_data, opt; cb)
-
-  Profile.clear()
-  Profile.clear_malloc_data()
-
-  optfun = OptimizationFunction((θ, p, x, y) -> lg(θ,x,y,model), GalacticOptim.AutoZygote())
-  optprob = OptimizationProblem(optfun, pp)
-  #using IterTools: ncycle
-  #Juno.@profiler GalacticOptim.solve(optprob, opt, train_data, cb = cbg, maxiters = n) C = true
-  GalacticOptim.solve(optprob, opt, train_data, cb = cbg, maxiters = 1000)
-
-
-
-  # sciml_train(p->lg(p,model), pp, opt, cb = cbg, maxiters=100)
-
-
-
-  #Juno.@profiler my_custom_train!(model, (x,y) -> loss(x,y,model), θ, train_data, opt; cb, lower, upper) C = true
+function lg(p,x,y,model)
+  # reset_state!(model,p)
+  reset!(model)
+  # d = train_data[1]
+  # x,y = d[1], d[2]
+  m = model
+  ŷ = [m(xi,p)[end-m.cell.wiring.n_motor+1:end, :] for xi in x]
+  #ŷ = m.(x,[p])
+  #losses = [Flux.Losses.mse(ŷ[i][end,:], y[i]) for i in 1:length(y)]
+  #sum(losses)/length(losses), ŷ
+  sum(sum([(ŷ[i][end,:] .- y[i]) .^ 2 for i in 1:length(y)]))/length(y), ŷ
 end
+cbg = function (p,l,pred;doplot=true) #callback function to observe training
+  display(l)
+  # plot current prediction against data
+  if doplot
+    fig = plot([ŷ[end,1] for ŷ in pred])
+    plot!(fig, [yi[end,1] for yi in y])
+    display(fig)
+  end
+  return false
+end
+x,y = generate_data()
+model = LTC.LTCNet(Wiring(2,1), AutoTsit5(Rosenbrock23()), InterpolatingAdjoint(autojacvec=ReverseDiffVJP(true)))
+pp = initial_params(model)
+lower,upper = [],[]
+@show length(pp)
+@show length(pp)
+@show length(lower)
+train_data = data(40)
+Profile.clear()
+Profile.clear_malloc_data()
+optfun = OptimizationFunction((θ, p, x, y) -> lg(θ,x,y,model), GalacticOptim.AutoZygote())
+optprob = OptimizationProblem(optfun, pp)
+res1 =  GalacticOptim.solve(optprob, BFGS(), train_data, cb = cbg, maxiters = 1000)
 
+optfun = OptimizationFunction((θ, p, x, y) -> lg(θ,x,y,model), GalacticOptim.AutoForwardDiff())
+optprob = OptimizationProblem(optfun, pp)
+res2 =  GalacticOptim.solve(optprob, BFGS(), train_data, cb = cbg, maxiters = 1000)
 
 
 function cthulu_test()
@@ -196,7 +131,7 @@ end
 # Flux.trainable(model)
 
 #@time traintest(10, AutoTsit5(Rosenbrock23()))
-@time traintest(40)
+@time traintest(40, opt = BFGS())
 #@time traintest(10)
 #00:53 - 01:02 = 9 min compilation time
 

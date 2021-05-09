@@ -1,6 +1,4 @@
-abstract type WiringT <: Function end
-
-struct Wiring <: WiringT
+struct Wiring <: Function
     n_in::Int
     out::Int
     n_sensory::Int
